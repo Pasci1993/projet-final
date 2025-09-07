@@ -12,6 +12,7 @@ class PageNotesScreen extends StatefulWidget {
     super.key,
     required this.utilisateurId,
     required this.nomUtilisateur,
+    required mdpUtilisateur,
   });
 
   @override

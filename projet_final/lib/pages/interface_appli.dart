@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'page_connexion.dart';
+import 'package:projet_final/pages/page_inscr.dart';
 
 class InterfaceAppli extends StatefulWidget {
   const InterfaceAppli({super.key, required this.title});
@@ -53,7 +53,7 @@ class _PageAccueil extends State<InterfaceAppli> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const PageConnexion(),
+                          builder: (context) => const PageInscription(),
                         ),
                       );
                     },

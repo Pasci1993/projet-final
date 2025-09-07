@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'database_helper.dart';
+import 'package:projet_final/pages/database_helper.dart';
+import 'package:projet_final/pages/page_connexion.dart';
+import 'package:projet_final/database_helper.dart';
 
 class PageInscription extends StatefulWidget {
   const PageInscription({super.key});
@@ -10,44 +12,45 @@ class PageInscription extends StatefulWidget {
 
 class _PageInscriptionState extends State<PageInscription> {
   final _formKey = GlobalKey<FormState>();
-  final _nomController = TextEditingController();
-  final _mdpController = TextEditingController();
-  final _db = DatabaseHelper();
 
-  bool _obscureText = true;
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _motDePasseController = TextEditingController();
+  final TextEditingController _confirmationMotDePasseController =
+      TextEditingController();
 
-  @override
-  void dispose() {
-    _nomController.dispose();
-    _mdpController.dispose();
-    super.dispose();
-  }
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      final nom = _nomController.text.trim();
-      final mdp = _mdpController.text;
+  Future<void> _inscrireUtilisateur() async {
+    final nom = _nomController.text.trim();
+    final email = _emailController.text.trim();
+    final mdp = _motDePasseController.text.trim();
 
-      if (await _db.isUserExists(nom)) {
-        _showDialog("Erreur", "Nom d'utilisateur déjà utilisé");
-      } else {
-        await _db.insertUser(nom, mdp);
-        _showDialog("Succès", "Inscription réussie !", success: true);
-      }
+    // Vérifier si l'utilisateur existe déjà
+    final existingUser = await _dbHelper.getUserByName(nom);
+    if (existingUser != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Ce nom est déjà utilisé.")));
+      return;
     }
-  }
 
-  void _showDialog(String title, String content, {bool success = false}) {
+    // Insérer dans la base
+    await _dbHelper.insertUser(nom, email, mdp);
+
+    // Afficher le succès
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
+      builder: (context) => AlertDialog(
+        title: const Text("Inscription réussie"),
+        content: Text("Bienvenue, $nom !"),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              if (success) Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const PageConnexion()),
+              );
             },
             child: const Text("OK"),
           ),
@@ -57,44 +60,107 @@ class _PageInscriptionState extends State<PageInscription> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Inscription")),
-    body: Padding(
-      padding: const EdgeInsets.all(20),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _nomController,
-              decoration: const InputDecoration(labelText: "Nom d'utilisateur"),
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? "Entrez un nom" : null,
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _mdpController,
-              obscureText: _obscureText,
-              decoration: InputDecoration(
-                labelText: "Mot de passe",
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureText ? Icons.visibility : Icons.visibility_off,
-                  ),
-                  onPressed: () => setState(() => _obscureText = !_obscureText),
-                ),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Inscription"),
+        backgroundColor: Colors.blue,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              const Text(
+                "Créer un compte",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? "Entrez un mot de passe" : null,
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _register,
-              child: const Text("S'inscrire"),
-            ),
-          ],
+              const SizedBox(height: 30),
+
+              // Champ Nom
+              TextFormField(
+                controller: _nomController,
+                decoration: const InputDecoration(
+                  labelText: "Nom",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Entrez votre nom' : null,
+              ),
+              const SizedBox(height: 20),
+
+              // Champ Email
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: "Email",
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Entrez votre email';
+                  } else if (!value.contains('@')) {
+                    return 'Entrez un email valide';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Mot de passe
+              TextFormField(
+                controller: _motDePasseController,
+                decoration: const InputDecoration(
+                  labelText: "Mot de passe",
+                  border: OutlineInputBorder(),
+                ),
+                obscureText: true,
+                validator: (value) => value == null || value.length < 6
+                    ? 'Le mot de passe doit contenir au moins 6 caractères'
+                    : null,
+              ),
+              const SizedBox(height: 20),
+
+              // Confirmation mot de passe
+              TextFormField(
+                controller: _confirmationMotDePasseController,
+                decoration: const InputDecoration(
+                  labelText: "Confirmer le mot de passe",
+                  border: OutlineInputBorder(),
+                ),
+                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez confirmer le mot de passe';
+                  } else if (value != _motDePasseController.text) {
+                    return 'Les mots de passe ne correspondent pas';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 30),
+
+              // Bouton S'inscrire
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _inscrireUtilisateur();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                child: const Text("S'inscrire"),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

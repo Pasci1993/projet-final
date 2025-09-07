@@ -1,10 +1,11 @@
+import 'package:projet_final/notes_model.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../notes_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
+
   DatabaseHelper._internal();
 
   static Database? _database;
@@ -15,60 +16,76 @@ class DatabaseHelper {
     return _database!;
   }
 
+  // Initialise la BDD
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'mes_notes.db');
-    return openDatabase(path, version: 1, onCreate: _onCreate);
+    final path = join(dbPath, 'projet_final.db');
+
+    return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
+  // Création de la table utilisateurs
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE utilisateurs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT NOT NULL UNIQUE,
-        mot_de_passe TEXT NOT NULL
+        nom TEXT NOT NULL,
+        email TEXT NOT NULL,
+        mdp TEXT NOT NULL
       )
     ''');
 
     await db.execute('''
-      CREATE TABLE notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        content TEXT,
-        color TEXT,
-        dateTime TEXT,
-        utilisateur_id INTEGER,
-        FOREIGN KEY(utilisateur_id) REFERENCES utilisateurs(id)
-      )
-    ''');
+CREATE TABLE notes (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+title TEXT NOT NULL,
+content TEXT,
+color TEXT,
+dateTime TEXT,
+utilisateur_id INTEGER,
+FOREIGN KEY(utilisateur_id) REFERENCES utilisateurs(id)
+)
+''');
   }
 
-  Future<bool> isUserExists(String nom) async {
+  // Insertion d'un utilisateur
+  Future<void> insertUser(String nom, String email, String mdp) async {
     final db = await database;
-    final res = await db.query(
+    await db.insert('utilisateurs', {
+      'nom': nom,
+      'email': email,
+      'mdp': mdp,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  // Récupération d'un utilisateur par nom et mot de passe
+  Future<Map<String, dynamic>?> getUser(String nom, String mdp) async {
+    final db = await database;
+    final result = await db.query(
+      'utilisateurs',
+      where: 'nom = ? AND mdp = ?',
+      whereArgs: [nom, mdp],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
+  }
+
+  // Récupération d'un utilisateur par nom (pour vérifier l'existence)
+  Future<Map<String, dynamic>?> getUserByName(String nom) async {
+    final db = await database;
+    final result = await db.query(
       'utilisateurs',
       where: 'nom = ?',
       whereArgs: [nom],
     );
-    return res.isNotEmpty;
-  }
 
-  Future<int> insertUser(String nom, String motDePasse) async {
-    final db = await database;
-    return db.insert('utilisateurs', {
-      'nom': nom,
-      'mot_de_passe': motDePasse,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<Map<String, dynamic>?> getUser(String nom, String motDePasse) async {
-    final db = await database;
-    final res = await db.query(
-      'utilisateurs',
-      where: 'nom = ? AND mot_de_passe = ?',
-      whereArgs: [nom, motDePasse],
-    );
-    return res.isNotEmpty ? res.first : null;
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
   }
 
   Future<List<Note>> getNotesParUtilisateur(int utilisateurId) async {

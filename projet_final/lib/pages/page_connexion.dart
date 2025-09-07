@@ -37,6 +37,7 @@ class _PageConnexionState extends State<PageConnexion> {
             builder: (_) => PageNotesScreen(
               utilisateurId: user['id'],
               nomUtilisateur: user['nom'],
+              mdpUtilisateur: user['mdp'],
             ),
           ),
         );
