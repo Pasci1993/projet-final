@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projet_final/pages/database_helper.dart';
 import 'package:projet_final/pages/page_connexion.dart';
-import 'package:projet_final/database_helper.dart';
 
 class PageInscription extends StatefulWidget {
   const PageInscription({super.key});
@@ -35,10 +34,8 @@ class _PageInscriptionState extends State<PageInscription> {
       return;
     }
 
-    // Insérer dans la base
     await _dbHelper.insertUser(nom, email, mdp);
 
-    // Afficher le succès
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
